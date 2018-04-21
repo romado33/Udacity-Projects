@@ -1,0 +1,21 @@
+References
+
+Udacity Discussion Forum  
+
+https://discussions.udacity.com/
+
+MongoDB Documentation
+
+https://docs.mongodb.com/manual/reference/program/mongoimport/
+https://docs.mongodb.com/manual/core/aggregation-pipeline/
+https://docs.mongodb.com/manual/reference/method/db.collection.count/
+
+Stack Overflow
+
+https://stackoverflow.com/questions/15171622/mongoimport-of-json-file
+https://stackoverflow.com/questions/8203677/splitting-strings-in-python-using-specific-characters
+https://stackoverflow.com/questions/13145468/mongodb-aggregation-framework-double-match
+https://stackoverflow.com/questions/18221436/python-adding-space-between-characters-in-string-most-efficient-way
+https://stackoverflow.com/questions/12339251/regex-detect-if-word-contains-lowercase-character
+https://stackoverflow.com/questions/717644/regular-expression-that-doesnt-contain-certain-string
+https://stackoverflow.com/questions/11648627/mongodb-shells-db-stats-in-php-and-python

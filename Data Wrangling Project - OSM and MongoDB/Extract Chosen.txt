@@ -1,0 +1,11 @@
+Extract Chosen: 
+
+I chose the area where live, a suburb of Ottawa (Ontario, Canada), called Kanata. 
+
+I obtained the extract data by downloading it from https://mapzen.com/data/metro-extracts/   
+
+The unzipped file size of the map extract was 115 MB. 
+
+Here is a link to the OSM area related to my extract:
+
+http://www.openstreetmap.org/#map=13/45.3159/-75.8985

@@ -1,0 +1,665 @@
+Cereal Nutrition by Mark Robert Dods
+========================================================
+  
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+#install.packages('dplyr', dependencies = TRUE)
+#install.packages('ggplot2', dependencies = TRUE)
+#install.packages('gridExtra', dependencies = TRUE)
+#install.packages('GGally', dependencies = TRUE)
+#install.packages('memisc', dependencies = TRUE)
+#install.packages('psych', dependencies = TRUE)
+#install.packages('knitr', repos = "http://cran.us.r-project.org")
+
+
+library(ggplot2)
+library(dplyr)
+library(gridExtra)
+library(GGally)
+library(memisc)
+library(psych)
+library(knitr)
+
+setwd("C:/r")
+
+cereals <- read.csv('cereal.csv', header = T,check.names = F)
+cereals <- cereals[!(cereals$mfr=="A"),]
+cereals <- plyr::rename(cereals, c("mfr" = "manufacturer"))
+cereals$manufacturer <- plyr::mapvalues(cereals$manufacturer, 
+  from=c("G", "K","N", "P", "Q","R"), to=c("General Mills", "Kelloggs",
+  "Nabisco", "Post", "Quaker Oats","Ralston Purina"))
+cereals <- mutate(cereals, SugarsToFiber = sugars/fiber)
+cereals <- mutate(cereals, SugarsToFat = sugars/fat)
+cereals <- mutate(cereals, WeightInGrams = weight * 28.3495)
+cereals <- mutate(cereals, PercFat = fat / WeightInGrams)
+cereals <- mutate(cereals, PercSodium = sodium / WeightInGrams)
+cereals <- mutate(cereals, PercSugar = sugars / WeightInGrams)
+cereals <- mutate(cereals, PercFiber = fiber / WeightInGrams)
+
+```
+
+### Introduction:  
+
+I chose the '80 cereals' dataset that I found on Kaggle
+(https://www.kaggle.com/crawford/80-cereals).  I chose it because it had 16 
+different variables (13 dependent, 3 independent) associated with each cereal 
+which I could compare to see which ones are correlated. I focused mainly on 
+sugar, fat, sodium, and fiber, and investigated 1) which manufacturer makes 
+the most healthy or unhealthy cereal, and 2) which variable most affects the 
+overall rating given to the cereal. I then created a model to predict rating 
+based on the sugar, fat, sodium, and fiber content of a particular cereal.
+
+### Fields in the dataset:
+   
+* Name: Name of cereal  
+* manufacturer: manufacturer of cereal  
+    + A = American Home Food Products   
+    + G = General Mills  
+    + K = Kelloggs  
+    + N = Nabisco  
+    + P = Post  
+    + Q = Quaker Oats  
+    + R = Ralston Purina  
+* type:  
+    + cold  
+    + hot  
+* calories: calories per serving  
+* protein: grams of protein  
+* fat: grams of fat  
+* sodium: milligrams of sodium  
+* fiber: grams of dietary fiber  
+* carbo: grams of complex carbohydrates  
+* sugars: grams of sugars  
+* potass: milligrams of potassium  
+* vitamins: vitamins and minerals - 0, 25, or 100, indicating the typical 
+percentage of FDA recommended  
+* shelf: display shelf  
+* weight: weight in ounces of one serving  
+* cups: number of cups in one serving  
+* rating: a rating of the cereals   
+
+## Univariate Plots Section
+
+Number of rows in dataset
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+nrow(cereals) #find number of rows in dataset
+
+```
+
+Summary of data type for each variable in dataset
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+str(cereals)  #summary of data type held by each variable in dataset
+
+```
+
+Summary stats for all variables in dataset
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+summary(cereals) #summary of all variables in dataset
+
+```
+
+Number of cereals in dataset by manufacturer
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+summary(cereals$manufacturer) #shows number of cereals by manufacturer
+
+#by(cereals$sugars,cereals$manufacturer,summary) 
+#by(cereals$fat,cereals$manufacturer,summary) 
+#by(cereals$sodium,cereals$manufacturer,summary) 
+#by(cereals$fiber,cereals$manufacturer,summary) 
+
+
+```
+
+Distributions of selected nutritional variables
+
+Note:  All statistical outliers have been included as they are valid values
+(as opposed to abnormal ones) within the distributions and are significant to 
+the dataset.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+ggplot(cereals, aes(sugars)) + geom_histogram(binwidth=0.5)  +
+  scale_x_continuous(limits = c(0,15),breaks = seq(0,15,1))
+
+
+
+```
+
+The above plot shows the Distribution of Sugars.  There is a spike at 3g so it 
+would appear that this is a target sugar content for many manufacturers.  I 
+edited the x axis values to exclude a value of -1 which was obviously an error 
+in data entry as it is an impossible value.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+ggplot(cereals, aes(fat)) + geom_histogram(binwidth=0.5)  +
+  scale_x_continuous(breaks = seq(0,5,1))
+
+```
+
+The above plot shows the Distribution of Fat, and we can see that the majority
+of cereals contain either 1 or 2 grams of fat.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+ggplot(cereals, aes(sodium)) + geom_histogram(binwidth=2.75)  +
+  scale_x_continuous(breaks = seq(0,325,25))
+
+```
+
+The above plot shows the Distribution of Sodium. Sodium content varies a lot, 
+with 0 and 200mg being spikes, but many other values exist, all the way from 0
+to 320.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+ggplot(cereals, aes(fiber)) + geom_histogram(binwidth=0.2)  +
+  scale_x_continuous(breaks = seq(0,20,1))
+
+```
+
+The above plot shows the Distribution of Fiber. We can see that the majority
+of cereals have very low fiber, with 0 being the most common amount, and we 
+can see that the majority of cereals have 3g or less of fiber.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+ggplot(cereals, aes(rating)) + geom_histogram(binwidth=2)  +
+  scale_x_continuous(breaks = seq(0,100,5))
+
+```
+
+The above plot shows the Distribution of Ratings. We can see that 40 is the most
+commmon rating, but it's hard to draw conclusions from the frequencies of the 
+ratings, it would be good to have more data to draw from.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+
+```
+## Univariate Analysis
+
+### What is the structure of your dataset?
+
+The structure of my dataset is 76 rows with 16 original columns, and 
+7 more that I added.
+
+### What is/are the main feature(s) of interest in your dataset?
+
+I am focusing on sugar, fat, sodium, and fiber and specifically on the
+relationship between said variables and the overall rating assigned to them.
+
+### What other features in the dataset do you think will help support your /
+investigation into your feature(s) of interest?
+   
+It helps that the dataset is complete and does not have any NA values.
+
+### Did you create any new variables from existing variables in the dataset?
+
+Yes, 7, as follows  
+*
+cereals <- mutate(cereals, SugarsToFiber = sugars/fiber)  
+cereals <- mutate(cereals, SugarsToFat = sugars/fat)  
+cereals <- mutate(cereals, WeightInGrams = weight * 28.3495)  
+cereals <- mutate(cereals, PercFat = fat / WeightInGrams)  
+cereals <- mutate(cereals, PercSodium = sodium / WeightInGrams)  
+cereals <- mutate(cereals, PercSugar = sugars / WeightInGrams)  
+cereals <- mutate(cereals, PercFiber = fiber / WeightInGrams)*
+
+### Of the features you investigated, were there any unusual distributions?  
+### Did you perform any operations on the data to tidy, adjust, or change the 
+### form of the data? If so, why did you do this?
+  
+There weren't any distributions I would characterize as unusual, but I think
+the distribution of Sodium was intersting in that it was the only one that 
+had a distribution that was widely distributed and more random than the others.
+
+I did not need to adjust or change the form of the data as it was already in a
+tidy form.
+
+
+
+## Bivariate Plots Section
+
+In this section I want to look at the selected nutritional variables by 
+manufacturer, along with their distribution by manufacturer.  I think it also 
+might be interesting to look at the relationships between fat and sugar as I 
+have heard that manufacturers try to raise one when they lower the other, and 
+vice versa.  I also want to look at the relationship between sugar and fiber as
+I know that some of the harmful of effects of consuming sugar are mitigated when
+the sugar is accompanied by an equal or great amount of fiber.
+
+These plots below show nutritional variables by manufacturer
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+ggplot(cereals,aes(y = sugars,x = manufacturer, fill = manufacturer))  + 
+  stat_summary(fun.y="mean", geom="bar") + 
+  xlab("Manufacturer") + 
+  ylab("Sugar Content") + 
+  ggtitle("Average Sugar Content by Manufacturer") +
+  scale_x_discrete(label=abbreviate) + 
+  theme(axis.text.x = element_text(angle = 15, hjust = 1)) + guides(fill=FALSE)
+
+```
+
+The above plot shows that Nabisco cereals have the lowest average sugar content, 
+while Post cereals have the highest.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+ggplot(cereals,aes(y = fat,x = manufacturer, fill = manufacturer))  + 
+  stat_summary(fun.y="mean", geom="bar") + 
+  xlab("Manufacturer") + 
+  ylab("Fat Content") + 
+  ggtitle("Average Fat Content by Manufacturer") +
+  scale_x_discrete(label=abbreviate) + 
+  theme(axis.text.x = element_text(angle = 15, hjust = 1)) + guides(fill=FALSE)
+
+```
+ 
+The above plot shows that Nabisco cereals have the lowest average fat content, 
+while Quaker Oats have the highest.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+ggplot(cereals,aes(y = sodium,x = manufacturer, fill = manufacturer))  + 
+  stat_summary(fun.y="mean", geom="bar") + 
+  xlab("Manufacturer") + 
+  ylab("Sodium Content") + 
+  ggtitle("Average Sodium Content by Manufacturer") +
+  scale_x_discrete(label=abbreviate) + 
+  theme(axis.text.x = element_text(angle = 15, hjust = 1)) + guides(fill=FALSE)
+
+```
+
+The above plot shows that Nabisco cereals have the lowest average sodium 
+content, while General Mills cereals have the highest.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+ggplot(cereals,aes(y = fiber,x = manufacturer, fill = manufacturer))  + 
+  stat_summary(fun.y="mean", geom="bar") + 
+  xlab("Manufacturer") + 
+  ylab("Fiber Content") + 
+  ggtitle("Average Fiber Content by Manufacturer") +
+  scale_x_discrete(label=abbreviate) + 
+  theme(axis.text.x = element_text(angle = 15, hjust = 1)) + guides(fill=FALSE)
+
+
+```
+
+The above plot shows that Nabisco cereals have the highest fiber content, while 
+General Mills cereals have the lowest.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+  
+ggplot(cereals,aes(y = rating,x = manufacturer, fill = manufacturer))  + 
+  stat_summary(fun.y="mean", geom="bar") + 
+  xlab("Manufacturer") + 
+  ylab("Rating") + 
+  ggtitle("Rating by Manufacturer") +
+  scale_x_discrete(label=abbreviate) + 
+  theme(axis.text.x = element_text(angle = 15, hjust = 1)) + guides(fill=FALSE)
+
+
+```
+
+The above plot shows that Nabisco has the highest average cereal rating, while 
+the rest are quite even, although General Mills has the lowest average rating.
+
+
+The box plots below show distribution of data for selected nutritional variables
+by manufacturer
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+ggplot(cereals,aes(x=manufacturer,y=sugars)) + geom_boxplot() + 
+  xlab("Manufacturer") + ylab("Sugar Content") + 
+  ggtitle("Sugar Content by Manufacturer") + 
+  scale_x_discrete(label=abbreviate) 
+
+```
+
+The above plot shows that Nabisco cereals have the smallest distribution of 
+sugar content, while Kellogs and Quaker Oats have the largest. It is interesting 
+that there are no outliers anywhere.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+ggplot(cereals,aes(x=manufacturer,y=fat)) + geom_boxplot() + 
+  xlab("Manufacturer") + ylab("Fat Content") + 
+  ggtitle("Fat Content by Manufacturer") + 
+  scale_x_discrete(label=abbreviate) 
+
+```
+
+The above plot shows that all Nabisco cereals have 0 fat content, while Ralston 
+Purina has the largest distribution. There are outliers, with Quaker Oats having
+the most extreme one.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+ggplot(cereals,aes(x=manufacturer,y=sodium)) + geom_boxplot() + 
+  xlab("Manufacturer") + ylab("Sodium Content") + 
+  ggtitle("Sodium Content by Manufacturer") + 
+  scale_x_discrete(label=abbreviate) 
+
+```
+
+The above plot shows that General Mills cereals have the smallest distribution 
+of sodium content (but with 2 outliers) while Quaker Oats has the largest 
+distribution. Both Ralston Purina and Post have an outlier that contains less 
+sodium than their average.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+ggplot(cereals,aes(x=manufacturer,y=fiber)) + geom_boxplot() + 
+  xlab("Manufacturer") + ylab("Fiber Content") + 
+  ggtitle("Fiber Content by Manufacturer") + 
+  scale_x_discrete(label=abbreviate) 
+
+```
+
+The above plot shows that Nabisco cereals have the smallest distribution, all 
+have relatively high fiber content (with one outlier above and one below), while
+Post cereals have the largest distribution.  Kellogs also has 2 high outliers.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+ggplot(cereals,aes(x=manufacturer,y=rating)) + geom_boxplot() + 
+  xlab("Manufacturer") + ylab("Rating") + 
+  ggtitle("Rating by Manufacturer") + 
+  scale_x_discrete(label=abbreviate) 
+
+```
+
+The above plot shows that Nabisco has the highest cereal rating and the lowest 
+distribution, which means they don't have a single cereal with bad ratings. 
+Quaker Oats had the largest distribution, and Kellogs had one extremly high 
+outlier.
+
+
+Correlation matrices for selected variables
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+pairs.panels(cereals[c("fat","sodium","fiber","sugars","rating")],76) 
+
+```
+
+The above correlation matrix shows correlation indices for rating vs. Fat, 
+Sodium, Fiber, and Sugar.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+pairs.panels(cereals[c("rating","PercFat", "PercSodium", "PercFiber", 
+                       "PercSugar")],76)
+
+```
+
+The above correlation matrix shows correlation indices for rating vs. PercFat, 
+PercSodium, PercFiber, and PercSugar. Where Perc is the percentage of content to
+total weight.  
+
+  
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+p1 = ggplot(cereals,aes(x = PercSugar, y = rating,colour = rating)) + 
+  geom_jitter() + geom_smooth(method='lm') + scale_x_log10() +
+  ggtitle("Rating vs PercSugar vs Rating") 
+
+p2 = ggplot(cereals,aes(y = rating, x = PercFat,colour = rating)) + 
+  geom_jitter(width = 0.25)  +
+  ggtitle("Rating vs PercFat vs Rating") 
+
+p3 = ggplot(cereals,aes(y = rating, x = PercSodium,colour = rating)) + 
+  geom_jitter(width = 0.25) +
+  ggtitle("Rating vs PercSodium vs Rating") 
+
+p4 = ggplot(cereals,aes(y = rating, x = PercFiber,colour = rating)) + 
+  geom_jitter() + 
+  geom_smooth(method='lm') + scale_x_log10() +
+  ggtitle("Rating vs PercFiber vs Rating")
+
+grid.arrange(p1,p2,p3,p4)
+
+```
+
+## Bivariate Analysis
+
+### Talk about some of the relationships you observed in this part of the 
+### investigation. How did the feature(s) of interest vary with other features 
+### in the dataset?
+
+I found that there was no significant correlation between either Sugar and Fat 
+(weak) or Sugar and Fiber (very weak). I then looked at the correlation between 
+rating and percentage of the selected nutrirional values (since percentage is a 
+more accurate measure then the number of grams/mg since the serving sizes can be
+different). I found that there is a strong correlation between the rating and 
+both percentage of sugar and percentage of fiber.  Although the correlation 
+between rating and percentage of fat and percentage of sodium is lower, I will 
+still use them to contruct my model to predict the rating of a cereal based on 
+its nutrition values.
+  
+### Did you observe any interesting relationships between the other features
+### (not the main feature(s) of interest)?
+
+Yes, a strong correlation that I wasn´t studying was the correlation betweeen 
+potassium and fiber (0.91)
+
+  
+### What was the strongest relationship you found?
+
+The strongest correlation value found in the matrix is -0.92 for calories and 
+fiber.
+  
+  
+## Multivariate Plots Section
+  
+
+These plots show the ratio of 1) Sugar to Fat and 2) Sugar to  # Fiber, first 
+all on one plot, then faceted by manufacturer.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+ggplot(cereals,aes(x=sugars,y=fat,color = manufacturer)) + 
+  geom_jitter(size = 2) +
+  geom_vline(xintercept = 7.5) + geom_hline(yintercept = 2.5) 
+
+
+ggplot(cereals,aes(x=sugars,y=fat,color = manufacturer)) + 
+  geom_jitter(size = 2) +
+  geom_vline(xintercept = 7.5) + geom_hline(yintercept = 2.5) +
+  facet_wrap(~manufacturer)
+
+```
+
+The healthiest quadrant for the above 2 plots is the lower left one, and the  
+unhealthiest, the upper right one.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+  
+ggplot(cereals,aes(x=sugars,y=fiber,color = manufacturer)) + 
+  geom_jitter(size = 2) +
+  geom_vline(xintercept = 7.5) + geom_hline(yintercept = 7) 
+
+ggplot(cereals,aes(x=sugars,y=fiber,color = manufacturer)) + 
+  geom_jitter(size = 2) +
+  geom_vline(xintercept = 7.5) + geom_hline(yintercept = 7) + 
+  facet_wrap(~manufacturer)
+
+```
+
+The healthiest quadrant for the above 2 plots is the upper left one, and the 
+unhealthiest, the lower right one.
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+```
+
+Correlation Indices for Sugar to Fiber
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+Sugars2FiberRatio <- cereals$PercSugar /cereals$PercFiber
+Sugars2FiberRatio[Sugars2FiberRatio == NaN] <- 0
+Sugars2FiberRatio[Sugars2FiberRatio == Inf] <- 10
+rating2sugars2fiber <- cor.test(cereals$rating,Sugars2FiberRatio)
+rating2sugars2fiber
+
+ggplot(cereals,aes(x=rating, y = PercSugar / PercFiber)) + 
+geom_jitter() + geom_smooth(method ="lm") +
+   ggtitle("Rating vs PercSugar / PercFiber")  
+
+```
+
+So the ratio of percentage sugars to percentage fiber is a decent predictor of 
+rating, but for my model I will add percentage sodium and percentage fat as 
+well.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+fit <- lm(rating ~PercSugar + PercFiber + PercSodium + PercFat, data=cereals)
+summary(fit)
+
+m1 <- lm(I(rating) ~ I(PercSugar), data = cereals)
+m2 <- update(m1, ~ . + PercFiber)
+m3 <- update(m2, ~ . + PercSodium)
+m4 <- update(m3, ~ . + PercFat)
+mtable(m1, m2, m3, m4)
+
+```
+
+## Multivariate Analysis
+
+I observed the rating and how it was affected by the relationship between the 
+percentages of sugar, fat, sodium, and fiber.
+
+### Were there any interesting or surprising interactions between features?
+
+I didn´t find any surprising interactions, the effects on the rating are what I 
+would have predicted.
+
+### OPTIONAL: Did you create any models with your dataset? 
+
+Yes, I made a model to predict rating based on PercSugar,PercFiber,PercSodium, 
+and PercFat.the model was very accurate, with an R-squared value of 0.931 with 
+all 4 varibles included.
+
+------
+
+## Final Plots and Summary
+
+### Plot One
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+  
+  ggplot(cereals,aes(x=manufacturer,y=rating)) + geom_boxplot() + 
+  xlab("Manufacturer") + ylab("Rating") + 
+  ggtitle("Rating by Manufacturer") + 
+  scale_x_discrete(label=abbreviate) 
+
+```
+
+### Description One
+
+This box plot plot shows how much higher Nabisco is than all the other 
+manufacturers. You can see that other manufacturer´s highest rated cereals are 
+only comparable with Nabisco´s lowest rated ones.
+
+### Plot Two
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+p1 = ggplot(cereals,aes(x = PercSugar, y = rating,colour = rating)) + 
+  geom_jitter() + geom_smooth(method='lm') + scale_x_log10() +
+  ggtitle("Rating vs PercSugar vs Rating") 
+
+p2 = ggplot(cereals,aes(y = rating, x = PercFat,colour = rating)) + 
+  geom_jitter(width = 0.25)  + ggtitle("Rating vs PercFat vs Rating") 
+
+p3 = ggplot(cereals,aes(y = rating, x = PercSodium,colour = rating)) + 
+  geom_jitter(width = 0.25) + ggtitle("Rating vs PercSodium vs Rating") 
+
+p4 = ggplot(cereals,aes(y = rating, x = PercFiber,colour = rating)) + 
+  geom_jitter() + geom_smooth(method='lm') + scale_x_log10() +
+  ggtitle("Rating vs PercFiber vs Rating") 
+
+grid.arrange(p1,p2,p3,p4)
+
+```
+
+### Description Two
+
+I like these 4 plots together as you can see how their respective correlation 
+indices look like when plotted.  It is obvious that PercSugar is closely 
+correlated to rating, while PercFat looks almost randomly distributed.
+
+### Plot Three
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+ggplot(cereals,aes(x=rating, y = PercSugar / PercFiber)) + 
+geom_jitter() + geom_smooth(method ="lm") +
+   ggtitle("Rating vs PercSugar / PercFiber")  
+
+```
+
+### Description Three
+
+Without trying to find a more complex model, I thought that the ratio of 
+Percentage of Sugar to Percentage of Fiber correlated well with the rating.  At 
+the top of the plot, we find all the cereals who had 0 fiber, this is a drawback
+of using a ratio to plot.
+
+------
+  
+## Reflection
+
+My overall conclusion is 1) that Nabisco makes the most nutritious cereals, by 
+far, and 2) that the rating for each cereal can be closely approximated by using
+a predictive model of PercSugar + PercFat +PercSodium + PercFiber.
+  
+Some of the challenges I encountered were: not knowing what year the study was 
+from, not knowing where or how the rating came from,  dealing with a relatively 
+small and incomplete dataset, and deciding what the most relevant columns were 
+to cereal nutrition.  Ideally, in the future, the dataset would include many 
+more cereals so that there is more data to base conclusions off of.  It would be
+interesting in the future to examine the relationship between ratings and 
+manufacturer, to see if there is any favoritism involved, or if the ratings are 
+generated from a fixed formula.
+
+## Resources used
+
+https://www.kaggle.com/crawford/80-cereals
+
+https://stackoverflow.com/questions/18882206/change-outline-and-fill-colors-of
+-histogram-with-qplot
+
+https://stackoverflow.com/questions/40711980/r-ggplot2-fit-curve-to-scatter-plot
+
+https://stackoverflow.com/questions/22282531/how-to-compute-correlations-between
+-all-columns-in-r-and-detect-highly-correlate
+
+https://stackoverflow.com/questions/8214303/conditional-replacement-of-values-in
+-a-data-frame
+
+https://stackoverflow.com/questions/36590230/how-to-remove-rows-with-inf-from-a-
+dataframe-in-r/36590347
+
+
+
+
+
+
+
+
+
+
